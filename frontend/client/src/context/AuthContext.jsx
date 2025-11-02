@@ -1,51 +1,86 @@
-import { createContext, useState, useContext, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
+import { signin } from '../utils/api';
 
 const AuthContext = createContext();
 
-export const useAuth = () => {
-    const context = useContext(AuthContext);
-    if (!context) {
-        throw new Error('useAuth must be used within an AuthProvider');
-    }
-    return context;
-};
-
 export const AuthProvider = ({ children }) => {
-    const [user, setUser] = useState(() => {
-        const savedUser = localStorage.getItem('user');
-        return savedUser ? JSON.parse(savedUser) : null;
-    });
-    const [loading, setLoading] = useState(false);
+    const [user, setUser] = useState(null);
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [loading, setLoading] = useState(true);
 
-    const login = (userData) => {
-        const completeUser = {
-            id: userData.id,
-            username: userData.username,
-            email: userData.email,
-            codeforcesHandle: userData.codeforcesHandle || null,
-            score: userData.score || 0
-        };
-        setUser(completeUser);
-        localStorage.setItem('user', JSON.stringify(completeUser));
+    useEffect(() => {
+        // Check if user is already logged in (from localStorage)
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+            try {
+                const parsedUser = JSON.parse(storedUser);
+                setUser(parsedUser);
+                setIsAuthenticated(true);
+            } catch (error) {
+                console.error('Error parsing stored user:', error);
+                localStorage.removeItem('user');
+            }
+        }
+        setLoading(false);
+    }, []);
+
+    const login = async (email, password) => {
+        try {
+            const response = await signin({ email, password });
+
+            if (response.success && response.user) {
+                const userData = {
+                    id: response.user.id,
+                    username: response.user.username,
+                    email: response.user.email,
+                    codeforcesHandle: response.user.codeforcesHandle,
+                    score: response.user.score
+                };
+
+                setUser(userData);
+                setIsAuthenticated(true);
+                localStorage.setItem('user', JSON.stringify(userData));
+
+                return { success: true };
+            } else {
+                throw new Error(response.message || 'Login failed');
+            }
+        } catch (error) {
+            console.error('Login error:', error);
+            throw error;
+        }
     };
 
     const logout = () => {
         setUser(null);
+        setIsAuthenticated(false);
         localStorage.removeItem('user');
     };
 
-    // Update user data (for profile updates)
     const updateUser = (updates) => {
         const updatedUser = { ...user, ...updates };
         setUser(updatedUser);
         localStorage.setItem('user', JSON.stringify(updatedUser));
     };
 
-    const isAuthenticated = !!user;
-
     return (
-        <AuthContext.Provider value={{ user, login, logout, updateUser, isAuthenticated, loading }}>
+        <AuthContext.Provider value={{
+            user,
+            isAuthenticated,
+            loading,
+            login,
+            logout,
+            updateUser
+        }}>
             {children}
         </AuthContext.Provider>
     );
+};
+
+export const useAuth = () => {
+    const context = useContext(AuthContext);
+    if (!context) {
+        throw new Error('useAuth must be used within AuthProvider');
+    }
+    return context;
 };

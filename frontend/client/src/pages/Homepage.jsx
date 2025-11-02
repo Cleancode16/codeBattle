@@ -17,6 +17,8 @@ const Homepage = () => {
     const [createBattleForm, setCreateBattleForm] = useState({
         mode: 'duo',
         duration: 15,
+        customDuration: '',
+        useCustomDuration: false,
         problemRating: 1200,
         topics: [],
         showTopicsDropdown: false
@@ -332,17 +334,64 @@ const Homepage = () => {
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                     Duration (minutes)
                                 </label>
-                                <select
-                                    value={createBattleForm.duration}
-                                    onChange={(e) => setCreateBattleForm({ ...createBattleForm, duration: parseInt(e.target.value) })}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
-                                >
-                                    <option value={5}>5 minutes</option>
-                                    <option value={10}>10 minutes</option>
-                                    <option value={15}>15 minutes</option>
-                                    <option value={30}>30 minutes</option>
-                                    <option value={60}>60 minutes</option>
-                                </select>
+                                
+                                {/* Quick Select Buttons */}
+                                <div className="grid grid-cols-3 gap-2 mb-3">
+                                    {[5, 10, 15, 30, 60].map((min) => (
+                                        <button
+                                            key={min}
+                                            type="button"
+                                            onClick={() => setCreateBattleForm({ 
+                                                ...createBattleForm, 
+                                                duration: min,
+                                                useCustomDuration: false 
+                                            })}
+                                            className={`px-3 py-2 rounded-lg text-sm font-medium transition ${
+                                                !createBattleForm.useCustomDuration && createBattleForm.duration === min
+                                                    ? 'bg-orange-600 text-white'
+                                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                            }`}
+                                        >
+                                            {min} min
+                                        </button>
+                                    ))}
+                                    <button
+                                        type="button"
+                                        onClick={() => setCreateBattleForm({ 
+                                            ...createBattleForm, 
+                                            useCustomDuration: true 
+                                        })}
+                                        className={`px-3 py-2 rounded-lg text-sm font-medium transition ${
+                                            createBattleForm.useCustomDuration
+                                                ? 'bg-orange-600 text-white'
+                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                        }`}
+                                    >
+                                        Custom
+                                    </button>
+                                </div>
+
+                                {/* Custom Duration Input */}
+                                {createBattleForm.useCustomDuration && (
+                                    <div className="relative">
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max="180"
+                                            value={createBattleForm.customDuration}
+                                            onChange={(e) => setCreateBattleForm({ 
+                                                ...createBattleForm, 
+                                                customDuration: e.target.value,
+                                                duration: parseInt(e.target.value) || 15
+                                            })}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
+                                            placeholder="Enter custom duration (1-180)"
+                                        />
+                                        <p className="mt-1 text-xs text-gray-500">
+                                            Enter a custom duration between 1 and 180 minutes
+                                        </p>
+                                    </div>
+                                )}
                             </div>
 
                             <div>
@@ -412,7 +461,15 @@ const Homepage = () => {
                             <button
                                 onClick={() => {
                                     setShowCreateBattleModal(false);
-                                    setCreateBattleForm({ mode: 'duo', duration: 15, problemRating: 1200, topics: [], showTopicsDropdown: false });
+                                    setCreateBattleForm({ 
+                                        mode: 'duo', 
+                                        duration: 15, 
+                                        customDuration: '',
+                                        useCustomDuration: false,
+                                        problemRating: 1200, 
+                                        topics: [], 
+                                        showTopicsDropdown: false 
+                                    });
                                 }}
                                 className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition"
                                 disabled={loading}

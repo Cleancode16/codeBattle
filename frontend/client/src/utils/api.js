@@ -39,7 +39,11 @@ export const signup = async (userData) => {
 export const signin = async (credentials) => {
     try {
         const response = await api.post('/auth/signin', credentials);
-        return response.data;
+        if (response.data.success) {
+            return response.data;
+        } else {
+            throw new Error(response.data.message || 'Signin failed');
+        }
     } catch (error) {
         throw error;
     }

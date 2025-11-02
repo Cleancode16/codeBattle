@@ -14,6 +14,8 @@ const Room = () => {
     const [battle, setBattle] = useState(null);
     const [loading, setLoading] = useState(true);
     const [timeRemaining, setTimeRemaining] = useState(null);
+    const [showWinnerModal, setShowWinnerModal] = useState(false);
+    const [battleResult, setBattleResult] = useState(null);
 
     useEffect(() => {
         fetchRoomInfo();
@@ -155,12 +157,34 @@ const Room = () => {
 
     const handleBattleEnded = (data) => {
         setBattle(data.battle);
-        alert(`Battle ended! Winner: ${data.winner.username}`);
+        setBattleResult({
+            type: 'winner',
+            winner: data.winner,
+            battle: data.battle,
+            forfeit: data.reason === 'forfeit',
+            forfeitMessage: data.message
+        });
+        setShowWinnerModal(true);
+
+        // Auto-exit after 10 seconds
+        setTimeout(() => {
+            navigate('/home');
+        }, 10000);
     };
 
     const handleBattleDraw = (data) => {
         setBattle(data.battle);
-        alert(data.message);
+        setBattleResult({
+            type: 'draw',
+            message: data.message,
+            battle: data.battle
+        });
+        setShowWinnerModal(true);
+
+        // Auto-exit after 10 seconds
+        setTimeout(() => {
+            navigate('/home');
+        }, 10000);
     };
 
     const handleRoomClosed = () => {
@@ -235,31 +259,55 @@ const Room = () => {
     };
 
     const handleExitBattle = () => {
-        if (!confirm('Are you sure you want to exit? If you are the host, the battle will be deleted and all participants will be removed.')) return;
-
-        if (isHost()) {
-            // Host exits = delete battle
-            socket.emit('delete-battle', {
-                roomId,
-                userId: user.id
-            });
+        // Warning for active battles
+        if (battle?.status === 'active') {
+            if (!confirm('⚠️ WARNING: Leaving an active battle will count as a FORFEIT and the opponent will win! Are you sure?')) return;
+        } else if (battle?.status === 'waiting') {
+            if (!confirm('Exit battle room?')) return;
         } else {
-            // Regular participant leaves
-            socket.emit('leave-battle', {
-                roomId,
-                userId: user.id
-            });
+            // Finished battles - just exit
+            navigate('/home');
+            return;
         }
+
+        // Emit leave-battle event
+        socket.emit('leave-battle', {
+            roomId,
+            userId: user.id
+        });
 
         navigate('/home');
     };
 
+    const handleDeleteBattle = () => {
+        if (!isHost()) {
+            alert('Only the host can delete the battle');
+            return;
+        }
+
+        const confirmMessage = battle?.status === 'finished' || battle?.status === 'draw'
+            ? 'Are you sure you want to delete this finished battle? It will be removed from your history.'
+            : 'Are you sure you want to delete this battle? All participants will be removed and the battle will be permanently deleted.';
+            
+        if (!confirm(confirmMessage)) return;
+
+        socket.emit('delete-battle', {
+            roomId,
+            userId: user.id
+        });
+
+        // Navigate after short delay
+        setTimeout(() => {
+            navigate('/home');
+        }, 500);
+    };
+
     const isHost = () => {
         if (battle) {
-            return battle.createdBy?.toString() === user?.id;
+            return battle.createdBy?.toString() === user?.id?.toString();
         }
         if (room) {
-            return room.host?.toString() === user?.id || room.host?._id?.toString() === user?.id;
+            return room.host?.toString() === user?.id?.toString() || room.host?._id?.toString() === user?.id?.toString();
         }
         return false;
     };
@@ -454,18 +502,17 @@ const Room = () => {
                                         )}
                                     </div>
                                     <div className="flex flex-col items-end gap-1">
-                                        {(participant.userId?.toString() === displayData?.host?.toString() || 
-                                          participant.userId?.toString() === displayData?.createdBy?.toString()) && (
+                                        {(participant.userId?.toString() === displayData?.createdBy?.toString()) && (
                                             <span className="px-2 py-1 bg-yellow-600 text-xs rounded-full">
                                                 Host
                                             </span>
                                         )}
-                                        {participant.userId?.toString() === user?.id && (
+                                        {participant.userId?.toString() === user?.id?.toString() && (
                                             <span className="px-2 py-1 bg-blue-600 text-xs rounded-full">
                                                 You
                                             </span>
                                         )}
-                                        {isHost() && participant.userId?.toString() !== user?.id && (
+                                        {isHost() && participant.userId?.toString() !== user?.id?.toString() && (
                                             <button
                                                 onClick={() => handleRemoveParticipant(participant.userId)}
                                                 className="mt-2 px-3 py-1 bg-red-600 hover:bg-red-700 text-xs rounded-full transition"
@@ -484,19 +531,17 @@ const Room = () => {
                 <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-700">
                     {isBattle ? (
                         <>
-                            {isHost() && battle?.status === 'waiting' && (
-                                <button
-                                    onClick={handleDeleteRoom}
-                                    className="flex-1 px-6 py-3 bg-red-700 hover:bg-red-800 rounded-lg transition font-semibold text-lg shadow-lg"
-                                >
-                                    🗑️ Delete Battle
-                                </button>
-                            )}
                             <button
                                 onClick={handleExitBattle}
                                 className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 rounded-lg transition font-semibold text-lg shadow-lg"
                             >
-                                {isHost() ? '🚪 Exit & Close Battle' : '👋 Leave Battle'}
+                                {battle?.status === 'active' ? '⚠️ Forfeit & Exit' : '🚪 Exit Battle'}
+                            </button>
+                            <button
+                                onClick={() => navigate('/home')}
+                                className="flex-1 px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg transition font-semibold text-lg shadow-lg"
+                            >
+                                Back to Home
                             </button>
                         </>
                     ) : (
@@ -526,6 +571,137 @@ const Room = () => {
                 </div>
             </div>
 
+            {/* Winner/Draw Modal */}
+            {showWinnerModal && battleResult && (
+                <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 z-50 animate-fadeIn">
+                    <div className="bg-gradient-to-br from-purple-900 via-pink-900 to-red-900 rounded-2xl shadow-2xl p-8 max-w-2xl w-full text-center border-4 border-yellow-400 animate-scaleIn">
+                        {battleResult.type === 'winner' ? (
+                            <>
+                                {/* Forfeit Warning */}
+                                {battleResult.forfeit && (
+                                    <div className="mb-4 p-4 bg-orange-600 text-white rounded-lg">
+                                        <p className="font-bold text-lg">⚠️ Battle Ended by Forfeit</p>
+                                        <p className="text-sm mt-1">{battleResult.forfeitMessage}</p>
+                                    </div>
+                                )}
+
+                                {/* Winner Display */}
+                                <div className="mb-6">
+                                    <div className="text-8xl mb-4 animate-bounce">🏆</div>
+                                    <h2 className="text-5xl font-bold text-yellow-300 mb-4 drop-shadow-lg">
+                                        {battleResult.forfeit ? 'Victory by Forfeit!' : 'Battle Complete!'}
+                                    </h2>
+                                    <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-gray-900 py-4 px-6 rounded-lg mb-4">
+                                        <h3 className="text-3xl font-bold mb-2">Winner</h3>
+                                        <p className="text-4xl font-black">{battleResult.winner.username}</p>
+                                        <p className="text-xl mt-2">CF: {battleResult.winner.codeforcesHandle}</p>
+                                    </div>
+                                </div>
+
+                                {/* Battle Stats */}
+                                <div className="grid grid-cols-2 gap-4 mb-6">
+                                    <div className="bg-black bg-opacity-40 p-4 rounded-lg">
+                                        <p className="text-sm text-gray-300 mb-1">Problem</p>
+                                        <p className="text-lg font-bold">{battleResult.battle.problem?.name}</p>
+                                    </div>
+                                    <div className="bg-black bg-opacity-40 p-4 rounded-lg">
+                                        <p className="text-sm text-gray-300 mb-1">Rating</p>
+                                        <p className="text-lg font-bold">{battleResult.battle.problemRating}</p>
+                                    </div>
+                                </div>
+
+                                {/* Confetti Effect */}
+                                <div className="text-6xl mb-4">
+                                    🎉 🎊 ✨ 🌟 ⭐
+                                </div>
+
+                                {/* Winner Badge */}
+                                {battleResult.winner.userId.toString() === user?.id?.toString() ? (
+                                    <div className="bg-green-500 text-white py-3 px-6 rounded-lg mb-4 text-xl font-bold">
+                                        🎉 Congratulations! You Won! 🎉
+                                        <p className="text-sm mt-1">+10 points added to your score!</p>
+                                    </div>
+                                ) : (
+                                    <div className="bg-red-500 text-white py-3 px-6 rounded-lg mb-4 text-lg font-semibold">
+                                        Better luck next time!
+                                        <p className="text-sm mt-1">+2 points for participation</p>
+                                    </div>
+                                )}
+                            </>
+                        ) : (
+                            <>
+                                {/* Draw Display */}
+                                <div className="mb-6">
+                                    <div className="text-8xl mb-4">⏱️</div>
+                                    <h2 className="text-5xl font-bold text-yellow-300 mb-4 drop-shadow-lg">
+                                        Time's Up!
+                                    </h2>
+                                    <div className="bg-gradient-to-r from-gray-600 to-gray-800 text-white py-4 px-6 rounded-lg mb-4">
+                                        <h3 className="text-3xl font-bold mb-2">It's a Draw!</h3>
+                                        <p className="text-xl">{battleResult.message}</p>
+                                    </div>
+                                </div>
+
+                                {/* All Players Get Points */}
+                                <div className="bg-blue-500 text-white py-3 px-6 rounded-lg mb-4 text-lg font-semibold">
+                                    All players earn +5 points!
+                                </div>
+
+                                <div className="text-4xl mb-4">
+                                    🤝 🌟 🤝
+                                </div>
+                            </>
+                        )}
+
+                        {/* Battle Summary */}
+                        <div className="bg-black bg-opacity-50 p-4 rounded-lg mb-6">
+                            <h4 className="text-lg font-bold mb-3 text-yellow-300">Battle Summary</h4>
+                            <div className="grid grid-cols-3 gap-3 text-sm">
+                                <div>
+                                    <p className="text-gray-400">Mode</p>
+                                    <p className="font-bold">{battleResult.battle.mode?.toUpperCase()}</p>
+                                </div>
+                                <div>
+                                    <p className="text-gray-400">Duration</p>
+                                    <p className="font-bold">{battleResult.battle.duration} min</p>
+                                </div>
+                                <div>
+                                    <p className="text-gray-400">Players</p>
+                                    <p className="font-bold">{battleResult.battle.players?.length || 0}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-4">
+                            <button
+                                onClick={() => navigate('/history')}
+                                className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition font-semibold text-lg shadow-lg"
+                            >
+                                📜 View History
+                            </button>
+                            <button
+                                onClick={() => navigate('/leaderboard')}
+                                className="flex-1 px-6 py-3 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition font-semibold text-lg shadow-lg"
+                            >
+                                🏆 Leaderboard
+                            </button>
+                            <button
+                                onClick={() => navigate('/home')}
+                                className="flex-1 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition font-semibold text-lg shadow-lg"
+                            >
+                                🏠 Home
+                            </button>
+                        </div>
+
+                        {/* Auto-redirect notice */}
+                        <p className="text-sm text-gray-400 mt-4">
+                            Redirecting to home in 10 seconds...
+                        </p>
+                    </div>
+                </div>
+            )}
+
             <style jsx>{`
                 .custom-scrollbar::-webkit-scrollbar {
                     width: 8px;
@@ -540,6 +716,24 @@ const Room = () => {
                 }
                 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
                     background: #9ca3af;
+                }
+
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+
+                @keyframes scaleIn {
+                    from { transform: scale(0.8); opacity: 0; }
+                    to { transform: scale(1); opacity: 1; }
+                }
+
+                .animate-fadeIn {
+                    animation: fadeIn 0.3s ease-in;
+                }
+
+                .animate-scaleIn {
+                    animation: scaleIn 0.4s ease-out;
                 }
             `}</style>
         </div>
