@@ -183,19 +183,94 @@ const Homepage = () => {
             {/* Main Content */}
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {/* Action Buttons */}
-                <div className="mb-8 flex flex-col sm:flex-row gap-4">
-                    <button
-                        onClick={() => setShowCreateBattleModal(true)}
-                        className="flex-1 sm:flex-none px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition font-medium shadow-lg text-lg"
-                    >
-                        ⚔️ Create New Battle
-                    </button>
-                    <button
-                        onClick={() => navigate('/join')}
-                        className="flex-1 sm:flex-none px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition font-medium shadow-lg text-lg"
-                    >
-                        📝 Join Battle with Code
-                    </button>
+                <div className="mb-8">
+                    <h2 className="text-2xl font-bold text-white mb-4">Choose Your Battle Mode</h2>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Quick Match Card */}
+                        <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-8 shadow-2xl transform hover:scale-105 transition">
+                            <div className="text-center mb-6">
+                                <div className="text-6xl mb-4">⚡</div>
+                                <h3 className="text-3xl font-bold text-white mb-2">Quick Match</h3>
+                                <p className="text-green-100 text-sm">Auto-match with online players</p>
+                            </div>
+                            
+                            <div className="bg-white/20 backdrop-blur-md rounded-lg p-4 mb-6 text-white">
+                                <h4 className="font-bold mb-3">Features:</h4>
+                                <ul className="space-y-2 text-sm">
+                                    <li className="flex items-start">
+                                        <span className="mr-2">✓</span>
+                                        <span>Instant matchmaking with similar skill players</span>
+                                    </li>
+                                    <li className="flex items-start">
+                                        <span className="mr-2">✓</span>
+                                        <span>Rating range: ±200 points from your score</span>
+                                    </li>
+                                    <li className="flex items-start">
+                                        <span className="mr-2">✓</span>
+                                        <span>1v1 battle mode only</span>
+                                    </li>
+                                    <li className="flex items-start">
+                                        <span className="mr-2">✓</span>
+                                        <span>Battle starts automatically when matched</span>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <button
+                                onClick={() => navigate('/matchmaking')}
+                                className="w-full px-6 py-4 bg-white text-green-600 rounded-xl hover:bg-green-50 transition font-bold text-lg shadow-xl"
+                            >
+                                Find Match Now
+                            </button>
+                        </div>
+
+                        {/* Custom Battle Card */}
+                        <div className="bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl p-8 shadow-2xl transform hover:scale-105 transition">
+                            <div className="text-center mb-6">
+                                <div className="text-6xl mb-4">⚔️</div>
+                                <h3 className="text-3xl font-bold text-white mb-2">Custom Battle</h3>
+                                <p className="text-orange-100 text-sm">Create your own battle room</p>
+                            </div>
+                            
+                            <div className="bg-white/20 backdrop-blur-md rounded-lg p-4 mb-6 text-white">
+                                <h4 className="font-bold mb-3">Features:</h4>
+                                <ul className="space-y-2 text-sm">
+                                    <li className="flex items-start">
+                                        <span className="mr-2">✓</span>
+                                        <span>Choose battle mode: 2v2, 3v3, or 4v4</span>
+                                    </li>
+                                    <li className="flex items-start">
+                                        <span className="mr-2">✓</span>
+                                        <span>Set custom duration and problem rating</span>
+                                    </li>
+                                    <li className="flex items-start">
+                                        <span className="mr-2">✓</span>
+                                        <span>Select specific problem topics</span>
+                                    </li>
+                                    <li className="flex items-start">
+                                        <span className="mr-2">✓</span>
+                                        <span>Share room code with friends</span>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    onClick={() => setShowCreateBattleModal(true)}
+                                    className="px-4 py-3 bg-white text-orange-600 rounded-xl hover:bg-orange-50 transition font-bold shadow-xl"
+                                >
+                                    Create Battle
+                                </button>
+                                <button
+                                    onClick={() => navigate('/join')}
+                                    className="px-4 py-3 bg-white/20 backdrop-blur-md text-white border-2 border-white rounded-xl hover:bg-white/30 transition font-bold"
+                                >
+                                    Join by Code
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Battles Section */}

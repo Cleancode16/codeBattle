@@ -157,19 +157,24 @@ const Room = () => {
 
     const handleBattleEnded = (data) => {
         setBattle(data.battle);
+        
+        // Determine if current user is the winner
+        const isWinner = data.winner?.userId?.toString() === user?.id?.toString();
+        
         setBattleResult({
             type: 'winner',
             winner: data.winner,
             battle: data.battle,
             forfeit: data.reason === 'forfeit',
-            forfeitMessage: data.message
+            forfeitMessage: data.message,
+            isUserWinner: isWinner
         });
         setShowWinnerModal(true);
 
-        // Auto-exit after 10 seconds
-        setTimeout(() => {
-            navigate('/home');
-        }, 10000);
+        // Auto-exit after 15 seconds (removed - let user click button)
+        // setTimeout(() => {
+        //     navigate('/home');
+        // }, 15000);
     };
 
     const handleBattleDraw = (data) => {
@@ -177,14 +182,12 @@ const Room = () => {
         setBattleResult({
             type: 'draw',
             message: data.message,
-            battle: data.battle
+            battle: data.battle,
+            isUserWinner: false // Not applicable for draws
         });
         setShowWinnerModal(true);
 
-        // Auto-exit after 10 seconds
-        setTimeout(() => {
-            navigate('/home');
-        }, 10000);
+        // Auto-exit removed - let user click button
     };
 
     const handleRoomClosed = () => {
@@ -259,15 +262,28 @@ const Room = () => {
     };
 
     const handleExitBattle = () => {
-        // Warning for active battles
+        // For finished/draw battles - show results modal
+        if (battle?.status === 'finished' || battle?.status === 'draw') {
+            // Prepare battle result data
+            const isWinner = battle.winner?.userId?.toString() === user?.id?.toString();
+            const isDraw = battle.status === 'draw';
+            
+            setBattleResult({
+                type: isDraw ? 'draw' : 'winner',
+                winner: battle.winner,
+                battle: battle,
+                forfeit: false,
+                isUserWinner: isWinner
+            });
+            setShowWinnerModal(true);
+            return; // Don't navigate yet - modal will handle it
+        }
+        
+        // For active battles - warn about forfeit
         if (battle?.status === 'active') {
             if (!confirm('⚠️ WARNING: Leaving an active battle will count as a FORFEIT and the opponent will win! Are you sure?')) return;
         } else if (battle?.status === 'waiting') {
             if (!confirm('Exit battle room?')) return;
-        } else {
-            // Finished battles - just exit
-            navigate('/home');
-            return;
         }
 
         // Emit leave-battle event
@@ -573,8 +589,8 @@ const Room = () => {
 
             {/* Winner/Draw Modal */}
             {showWinnerModal && battleResult && (
-                <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 z-50 animate-fadeIn">
-                    <div className="bg-gradient-to-br from-purple-900 via-pink-900 to-red-900 rounded-2xl shadow-2xl p-8 max-w-2xl w-full text-center border-4 border-yellow-400 animate-scaleIn">
+                <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center p-4 z-50 animate-fadeIn">
+                    <div className="bg-gradient-to-br from-purple-900 via-pink-900 to-red-900 rounded-2xl shadow-2xl p-6 sm:p-8 max-w-3xl w-full text-center border-4 border-yellow-400 animate-scaleIn overflow-y-auto max-h-[90vh]">
                         {battleResult.type === 'winner' ? (
                             <>
                                 {/* Forfeit Warning */}
@@ -587,117 +603,183 @@ const Room = () => {
 
                                 {/* Winner Display */}
                                 <div className="mb-6">
-                                    <div className="text-8xl mb-4 animate-bounce">🏆</div>
-                                    <h2 className="text-5xl font-bold text-yellow-300 mb-4 drop-shadow-lg">
+                                    <div className="text-6xl sm:text-8xl mb-4 animate-bounce">
+                                        {battleResult.isUserWinner ? '🎉' : '😔'}
+                                    </div>
+                                    <h2 className="text-3xl sm:text-5xl font-bold text-yellow-300 mb-4 drop-shadow-lg">
                                         {battleResult.forfeit ? 'Victory by Forfeit!' : 'Battle Complete!'}
                                     </h2>
-                                    <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-gray-900 py-4 px-6 rounded-lg mb-4">
-                                        <h3 className="text-3xl font-bold mb-2">Winner</h3>
-                                        <p className="text-4xl font-black">{battleResult.winner.username}</p>
-                                        <p className="text-xl mt-2">CF: {battleResult.winner.codeforcesHandle}</p>
+                                    
+                                    {/* Winner Card */}
+                                    <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-gray-900 py-4 sm:py-6 px-4 sm:px-6 rounded-xl mb-4">
+                                        <h3 className="text-2xl sm:text-3xl font-bold mb-2">🏆 Winner</h3>
+                                        <p className="text-3xl sm:text-4xl font-black">{battleResult.winner.username}</p>
+                                        <p className="text-lg sm:text-xl mt-2">CF: {battleResult.winner.codeforcesHandle}</p>
                                     </div>
                                 </div>
 
-                                {/* Battle Stats */}
-                                <div className="grid grid-cols-2 gap-4 mb-6">
-                                    <div className="bg-black bg-opacity-40 p-4 rounded-lg">
-                                        <p className="text-sm text-gray-300 mb-1">Problem</p>
-                                        <p className="text-lg font-bold">{battleResult.battle.problem?.name}</p>
+                                {/* User Result Badge */}
+                                {battleResult.isUserWinner ? (
+                                    <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white py-4 sm:py-6 px-4 sm:px-6 rounded-xl mb-6 shadow-2xl">
+                                        <div className="text-4xl sm:text-5xl mb-3">🎊 🎉 🏆 🎉 🎊</div>
+                                        <h3 className="text-2xl sm:text-3xl font-bold mb-2">Congratulations!</h3>
+                                        <p className="text-lg sm:text-xl mb-3">You Won the Battle!</p>
+                                        <div className="bg-white/20 backdrop-blur-md rounded-lg p-4 mt-4">
+                                            <p className="text-2xl sm:text-3xl font-bold text-yellow-300">+10 Points</p>
+                                            <p className="text-sm sm:text-base mt-1">Added to your score!</p>
+                                        </div>
                                     </div>
-                                    <div className="bg-black bg-opacity-40 p-4 rounded-lg">
-                                        <p className="text-sm text-gray-300 mb-1">Rating</p>
-                                        <p className="text-lg font-bold">{battleResult.battle.problemRating}</p>
+                                ) : (
+                                    <div className="bg-gradient-to-r from-red-500 to-pink-600 text-white py-4 sm:py-6 px-4 sm:px-6 rounded-xl mb-6 shadow-2xl">
+                                        <div className="text-4xl sm:text-5xl mb-3">💪 🌟 💪</div>
+                                        <h3 className="text-2xl sm:text-3xl font-bold mb-2">Better Luck Next Time!</h3>
+                                        <p className="text-base sm:text-lg mb-3">Don't give up! Every battle makes you stronger.</p>
+                                        <div className="bg-white/20 backdrop-blur-md rounded-lg p-4 mt-4">
+                                            <p className="text-xl sm:text-2xl font-bold text-yellow-300">+2 Points</p>
+                                            <p className="text-sm sm:text-base mt-1">For participation and effort!</p>
+                                        </div>
+                                        <div className="mt-4 text-sm sm:text-base">
+                                            <p className="font-semibold">💡 Keep practicing and you'll win soon!</p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Battle Stats */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
+                                    <div className="bg-black bg-opacity-40 p-3 sm:p-4 rounded-lg">
+                                        <p className="text-xs sm:text-sm text-gray-300 mb-1">Problem</p>
+                                        <p className="text-sm sm:text-lg font-bold">{battleResult.battle.problem?.name || 'N/A'}</p>
+                                    </div>
+                                    <div className="bg-black bg-opacity-40 p-3 sm:p-4 rounded-lg">
+                                        <p className="text-xs sm:text-sm text-gray-300 mb-1">Rating</p>
+                                        <p className="text-sm sm:text-lg font-bold">{battleResult.battle.problemRating}</p>
+                                    </div>
+                                    <div className="bg-black bg-opacity-40 p-3 sm:p-4 rounded-lg">
+                                        <p className="text-xs sm:text-sm text-gray-300 mb-1">Duration</p>
+                                        <p className="text-sm sm:text-lg font-bold">{battleResult.battle.duration} min</p>
+                                    </div>
+                                    <div className="bg-black bg-opacity-40 p-3 sm:p-4 rounded-lg">
+                                        <p className="text-xs sm:text-sm text-gray-300 mb-1">Mode</p>
+                                        <p className="text-sm sm:text-lg font-bold">{battleResult.battle.mode?.toUpperCase()}</p>
                                     </div>
                                 </div>
 
                                 {/* Confetti Effect */}
-                                <div className="text-6xl mb-4">
-                                    🎉 🎊 ✨ 🌟 ⭐
+                                <div className="text-4xl sm:text-6xl mb-4">
+                                    {battleResult.isUserWinner ? '🎉 🎊 ✨ 🌟 ⭐' : '💪 🔥 ⚡ 🎯 🚀'}
                                 </div>
-
-                                {/* Winner Badge */}
-                                {battleResult.winner.userId.toString() === user?.id?.toString() ? (
-                                    <div className="bg-green-500 text-white py-3 px-6 rounded-lg mb-4 text-xl font-bold">
-                                        🎉 Congratulations! You Won! 🎉
-                                        <p className="text-sm mt-1">+10 points added to your score!</p>
-                                    </div>
-                                ) : (
-                                    <div className="bg-red-500 text-white py-3 px-6 rounded-lg mb-4 text-lg font-semibold">
-                                        Better luck next time!
-                                        <p className="text-sm mt-1">+2 points for participation</p>
-                                    </div>
-                                )}
                             </>
                         ) : (
                             <>
                                 {/* Draw Display */}
                                 <div className="mb-6">
-                                    <div className="text-8xl mb-4">⏱️</div>
-                                    <h2 className="text-5xl font-bold text-yellow-300 mb-4 drop-shadow-lg">
+                                    <div className="text-6xl sm:text-8xl mb-4">⏱️</div>
+                                    <h2 className="text-3xl sm:text-5xl font-bold text-yellow-300 mb-4 drop-shadow-lg">
                                         Time's Up!
                                     </h2>
-                                    <div className="bg-gradient-to-r from-gray-600 to-gray-800 text-white py-4 px-6 rounded-lg mb-4">
-                                        <h3 className="text-3xl font-bold mb-2">It's a Draw!</h3>
-                                        <p className="text-xl">{battleResult.message}</p>
+                                    <div className="bg-gradient-to-r from-gray-600 to-gray-800 text-white py-4 sm:py-6 px-4 sm:px-6 rounded-xl mb-4">
+                                        <h3 className="text-2xl sm:text-3xl font-bold mb-2">It's a Draw!</h3>
+                                        <p className="text-base sm:text-xl">{battleResult.message}</p>
                                     </div>
                                 </div>
 
                                 {/* All Players Get Points */}
-                                <div className="bg-blue-500 text-white py-3 px-6 rounded-lg mb-4 text-lg font-semibold">
-                                    All players earn +5 points!
+                                <div className="bg-gradient-to-r from-blue-500 to-cyan-600 text-white py-4 sm:py-6 px-4 sm:px-6 rounded-xl mb-6 shadow-2xl">
+                                    <div className="text-4xl sm:text-5xl mb-3">🤝 🌟 🤝</div>
+                                    <h3 className="text-xl sm:text-2xl font-bold mb-2">Great Effort from Everyone!</h3>
+                                    <div className="bg-white/20 backdrop-blur-md rounded-lg p-4 mt-4">
+                                        <p className="text-2xl sm:text-3xl font-bold text-yellow-300">+5 Points</p>
+                                        <p className="text-sm sm:text-base mt-1">All players earn points!</p>
+                                    </div>
                                 </div>
 
-                                <div className="text-4xl mb-4">
-                                    🤝 🌟 🤝
+                                {/* Battle Stats */}
+                                <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6">
+                                    <div className="bg-black bg-opacity-40 p-3 sm:p-4 rounded-lg">
+                                        <p className="text-xs sm:text-sm text-gray-300 mb-1">Problem</p>
+                                        <p className="text-sm sm:text-base font-bold">{battleResult.battle.problem?.name || 'N/A'}</p>
+                                    </div>
+                                    <div className="bg-black bg-opacity-40 p-3 sm:p-4 rounded-lg">
+                                        <p className="text-xs sm:text-sm text-gray-300 mb-1">Rating</p>
+                                        <p className="text-sm sm:text-base font-bold">{battleResult.battle.problemRating}</p>
+                                    </div>
+                                    <div className="bg-black bg-opacity-40 p-3 sm:p-4 rounded-lg">
+                                        <p className="text-xs sm:text-sm text-gray-300 mb-1">Duration</p>
+                                        <p className="text-sm sm:text-base font-bold">{battleResult.battle.duration} min</p>
+                                    </div>
+                                    <div className="bg-black bg-opacity-40 p-3 sm:p-4 rounded-lg">
+                                        <p className="text-xs sm:text-sm text-gray-300 mb-1">Players</p>
+                                        <p className="text-sm sm:text-base font-bold">{battleResult.battle.players?.length || 0}</p>
+                                    </div>
                                 </div>
                             </>
                         )}
 
                         {/* Battle Summary */}
-                        <div className="bg-black bg-opacity-50 p-4 rounded-lg mb-6">
-                            <h4 className="text-lg font-bold mb-3 text-yellow-300">Battle Summary</h4>
-                            <div className="grid grid-cols-3 gap-3 text-sm">
-                                <div>
-                                    <p className="text-gray-400">Mode</p>
-                                    <p className="font-bold">{battleResult.battle.mode?.toUpperCase()}</p>
+                        <div className="bg-black bg-opacity-50 p-4 sm:p-6 rounded-xl mb-6">
+                            <h4 className="text-base sm:text-lg font-bold mb-3 text-yellow-300">📊 Battle Summary</h4>
+                            <div className="space-y-3 text-left">
+                                <div className="flex justify-between items-center text-sm sm:text-base">
+                                    <span className="text-gray-300">Battle ID:</span>
+                                    <span className="font-mono font-bold text-purple-300">{battleResult.battle.roomId}</span>
                                 </div>
-                                <div>
-                                    <p className="text-gray-400">Duration</p>
-                                    <p className="font-bold">{battleResult.battle.duration} min</p>
+                                <div className="flex justify-between items-center text-sm sm:text-base">
+                                    <span className="text-gray-300">Status:</span>
+                                    <span className="font-bold text-green-300">{battleResult.battle.status?.toUpperCase()}</span>
                                 </div>
-                                <div>
-                                    <p className="text-gray-400">Players</p>
-                                    <p className="font-bold">{battleResult.battle.players?.length || 0}</p>
+                                <div className="flex justify-between items-center text-sm sm:text-base">
+                                    <span className="text-gray-300">Participants:</span>
+                                    <span className="font-bold">{battleResult.battle.players?.length || 0} players</span>
                                 </div>
+                                {battleResult.battle.problem?.link && (
+                                    <div className="mt-3 pt-3 border-t border-gray-600">
+                                        <a
+                                            href={battleResult.battle.problem.link}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="block w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition font-bold text-sm sm:text-base"
+                                        >
+                                            📝 Review Problem on Codeforces →
+                                        </a>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
                         {/* Action Buttons */}
-                        <div className="flex gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                             <button
                                 onClick={() => navigate('/history')}
-                                className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition font-semibold text-lg shadow-lg"
+                                className="px-4 sm:px-6 py-3 sm:py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition font-semibold text-sm sm:text-base shadow-lg transform hover:scale-105"
                             >
                                 📜 View History
                             </button>
                             <button
                                 onClick={() => navigate('/leaderboard')}
-                                className="flex-1 px-6 py-3 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition font-semibold text-lg shadow-lg"
+                                className="px-4 sm:px-6 py-3 sm:py-4 bg-yellow-600 hover:bg-yellow-700 text-white rounded-xl transition font-semibold text-sm sm:text-base shadow-lg transform hover:scale-105"
                             >
                                 🏆 Leaderboard
                             </button>
                             <button
-                                onClick={() => navigate('/home')}
-                                className="flex-1 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition font-semibold text-lg shadow-lg"
+                                onClick={() => {
+                                    setShowWinnerModal(false);
+                                    navigate('/home');
+                                }}
+                                className="px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-xl transition font-bold text-sm sm:text-base shadow-xl transform hover:scale-105"
                             >
-                                🏠 Home
+                                🏠 Back to Home
                             </button>
                         </div>
 
-                        {/* Auto-redirect notice */}
-                        <p className="text-sm text-gray-400 mt-4">
-                            Redirecting to home in 10 seconds...
-                        </p>
+                        {/* Motivational Quote for Losers */}
+                        {battleResult.type === 'winner' && !battleResult.isUserWinner && (
+                            <div className="mt-6 p-4 bg-purple-900/50 backdrop-blur-md rounded-lg border border-purple-500">
+                                <p className="text-sm sm:text-base italic text-purple-200">
+                                    "Success is not final, failure is not fatal: it is the courage to continue that counts."
+                                </p>
+                                <p className="text-xs sm:text-sm text-purple-300 mt-2">— Keep coding, keep improving! 💪</p>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

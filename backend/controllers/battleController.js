@@ -24,9 +24,7 @@ exports.getAllBattles = async (req, res) => {
 // Get single battle
 exports.getBattle = async (req, res) => {
     try {
-        const battle = await Battle.findOne({ roomId: req.params.id })
-            .populate('players.userId', 'username email codeforcesHandle')
-            .populate('createdBy', 'username email');
+        const battle = await Battle.findOne({ roomId: req.params.id });
 
         if (!battle) {
             return res.status(404).json({
@@ -34,6 +32,8 @@ exports.getBattle = async (req, res) => {
                 message: 'Battle not found'
             });
         }
+
+        console.log('Battle found:', battle.roomId, 'Status:', battle.status);
 
         res.json({
             success: true,

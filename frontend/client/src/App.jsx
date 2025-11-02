@@ -11,6 +11,7 @@ import JoinRoom from './pages/JoinRoom';
 import BattleHistory from './pages/BattleHistory';
 import Leaderboard from './pages/Leaderboard';
 import JoinBattle from './pages/JoinBattle';
+import Matchmaking from './pages/Matchmaking';
 import './App.css';
 
 function App() {
@@ -66,6 +67,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Leaderboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/matchmaking"
+              element={
+                <ProtectedRoute>
+                  <Matchmaking />
                 </ProtectedRoute>
               }
             />

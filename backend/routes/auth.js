@@ -81,7 +81,9 @@ router.post('/signup', async (req, res) => {
             user: {
                 id: user._id,
                 username: user.username,
-                email: user.email
+                email: user.email,
+                codeforcesHandle: user.codeforcesHandle || null,
+                score: user.score || 0
             }
         });
 
@@ -139,7 +141,9 @@ router.post('/signin', async (req, res) => {
             user: {
                 id: user._id,
                 username: user.username,
-                email: user.email
+                email: user.email,
+                codeforcesHandle: user.codeforcesHandle,
+                score: user.score
             }
         });
 

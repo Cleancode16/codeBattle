@@ -6,7 +6,9 @@ const { Server } = require('socket.io');
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/auth');
 const battleRoutes = require('./routes/battle');
+const userRoutes = require('./routes/user');
 const battleHandler = require('./socket/battleHandler');
+const matchmakingHandler = require('./socket/matchmakingHandler');
 const cors = require('cors');
 
 const app = express();
@@ -32,6 +34,7 @@ connectDB();
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api', battleRoutes);
+app.use('/api', userRoutes);
 
 // Basic route
 app.get('/', (req, res) => {
@@ -43,8 +46,18 @@ app.get('/health', (req, res) => {
     res.json({ status: 'OK', message: 'Server is healthy' });
 });
 
-// Initialize Socket.io handlers
+// Socket.IO
+io.on('connection', (socket) => {
+    console.log('User connected:', socket.id);
+    
+    socket.on('disconnect', () => {
+        console.log('User disconnected:', socket.id);
+    });
+});
+
+// Initialize handlers
 battleHandler(io);
+matchmakingHandler(io);
 
 // Make io accessible to routes
 app.set('io', io);
