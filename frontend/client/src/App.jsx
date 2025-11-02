@@ -10,6 +10,7 @@ import Room from './pages/Room';
 import JoinRoom from './pages/JoinRoom';
 import BattleHistory from './pages/BattleHistory';
 import Leaderboard from './pages/Leaderboard';
+import JoinBattle from './pages/JoinBattle';
 import './App.css';
 
 function App() {
@@ -40,7 +41,7 @@ function App() {
               path="/join"
               element={
                 <ProtectedRoute>
-                  <JoinRoom />
+                  <JoinBattle />
                 </ProtectedRoute>
               }
             />

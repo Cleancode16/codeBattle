@@ -539,9 +539,9 @@ const Room = () => {
                             </button>
                             <button
                                 onClick={() => navigate('/home')}
-                                className="flex-1 px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg transition font-semibold text-lg shadow-lg"
+                                className="flex-1 px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg transition font-semibold text-lg shadow-lg"
                             >
-                                Back to Home
+                                🏠 Back to Home
                             </button>
                         </>
                     ) : (
@@ -560,14 +560,14 @@ const Room = () => {
                             >
                                 Leave Room
                             </button>
+                            <button
+                                onClick={() => navigate('/home')}
+                                className="flex-1 px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg transition font-semibold text-lg shadow-lg"
+                            >
+                                🏠 Back to Home
+                            </button>
                         </>
                     )}
-                    <button
-                        onClick={() => navigate('/home')}
-                        className="flex-1 px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg transition font-semibold text-lg shadow-lg"
-                    >
-                        Back to Home
-                    </button>
                 </div>
             </div>
 
